@@ -1,0 +1,112 @@
+
+
+// Vertex shader
+const vertexShaderSource = `
+attribute vec3 vertex, normal;
+attribute vec2 texCoord;
+uniform mat4 ModelViewProjectionMatrix, NormalM;
+
+
+varying vec3 varCol;
+varying vec2 texCoordV;
+uniform vec3 texTranslate;
+uniform float scaleAmpl;
+
+uniform vec3 lightPos;
+
+mat4 translation(vec3 t) {
+    mat4 dst;
+
+    dst[0][0] = 1.0;
+    dst[0][ 1] = 0.0;
+    dst[0][ 2] = 0.0;
+    dst[0][ 3] = 0.0;
+    dst[1][ 0] = 0.0;
+    dst[1][ 1] = 1.0;
+    dst[1][ 2] = 0.0;
+    dst[1][ 3] = 0.0;
+    dst[2][ 0] = 0.0;
+    dst[2][ 1] = 0.0;
+    dst[2][ 2] = 1.0;
+    dst[2][ 3] = 0.0;
+    dst[3][ 0] = t.x;
+    dst[3][ 1] = t.y;
+    dst[3][ 2] = t.z;
+    dst[3][ 3] = 1.0;
+
+    return dst;
+}
+
+mat4 scaling(float s){
+    mat4 dst;
+
+    dst[0][0] = s;
+    dst[0][ 1] = 0.0;
+    dst[0][ 2] = 0.0;
+    dst[0][ 3] = 0.0;
+    dst[1][ 0] = 0.0;
+    dst[1][ 1] = s;
+    dst[1][ 2] = 0.0;
+    dst[1][ 3] = 0.0;
+    dst[2][ 0] = 0.0;
+    dst[2][ 1] = 0.0;
+    dst[2][ 2] = s;
+    dst[2][ 3] = 0.0;
+    dst[3][ 0] = 0.0;
+    dst[3][ 1] = 0.0;
+    dst[3][ 2] = 0.0;
+    dst[3][ 3] = 1.0;
+
+    return dst;
+}
+
+void main() {
+    vec4 tex1 = translation(-texTranslate)*vec4(texCoord,0.,1.);
+    vec4 tex2 = scaling(scaleAmpl)*tex1;
+    vec4 tex3 = translation(texTranslate)*tex2;
+    texCoordV=tex3.xy;
+    vec4 vertPos4 = ModelViewProjectionMatrix * vec4(vertex, 1.0);
+    vec3 vertPos = vec3(vertPos4) / vertPos4.w;
+    vec4 norm = NormalM*vec4(normal,1.0);
+    vec3 N = normalize(vec3(norm));
+    vec3 L = normalize(lightPos - vertPos);
+    // Lambert's cosine law
+    float lambertian = max(dot(N, L), 0.0);
+    float specular = 0.0;
+    if(lambertian > 0.0) {
+        vec3 R = reflect(-L, N);      // Reflected light vector
+        vec3 V = normalize(-vertPos); // Vector to viewer
+        // Compute the specular term
+        float specAngle = max(dot(R, V), 0.0);
+        specular = pow(specAngle, 80.0);
+    }
+    vec3 ambientColor = vec3(0.0,0.1,0.0);
+    vec3 diffuseColor = vec3(0.0,0.7,0.0);
+    vec3 specularColor = vec3(0.0,1.0,0.0);;
+    varCol = vec3(ambientColor +
+                lambertian * diffuseColor +
+                specular * specularColor);
+    //varCol = normal;
+    gl_Position = ModelViewProjectionMatrix * vec4(vertex,1.0);
+}`;
+
+
+// Fragment shader
+const fragmentShaderSource = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+   precision highp float;
+#else
+   precision mediump float;
+#endif
+varying vec3 varCol;
+uniform vec4 color;
+uniform sampler2D tmu;
+varying vec2 texCoordV;
+void main() {
+    gl_FragColor = color;
+    gl_FragColor = vec4(varCol,1.0);
+    gl_FragColor = texture2D(tmu, texCoordV);
+    if(color.a>100.0){
+        gl_FragColor = vec4(1.0);
+    }
+}`;
