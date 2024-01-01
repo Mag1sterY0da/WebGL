@@ -7,6 +7,8 @@ uniform mat4 ModelViewProjectionMatrix, NormalM;
 
 
 varying vec3 varCol;
+uniform float u_spec;
+uniform vec3 u_sC,u_dC;
 
 void main() {
     vec4 vertPos4 = ModelViewProjectionMatrix * vec4(vertex, 1.0);
@@ -23,11 +25,11 @@ void main() {
         vec3 V = normalize(-vertPos); // Vector to viewer
         // Compute the specular term
         float specAngle = max(dot(R, V), 0.0);
-        specular = pow(specAngle, 80.0);
+        specular = pow(specAngle, u_spec);
     }
-    vec3 ambientColor = vec3(0.0,0.1,0.0);
-    vec3 diffuseColor = vec3(0.0,0.7,0.0);
-    vec3 specularColor = vec3(0.0,1.0,0.0);;
+    vec3 ambientColor = u_dC*0.1;
+    vec3 diffuseColor = u_dC;
+    vec3 specularColor = u_sC;
     varCol = vec3(ambientColor +
                 lambertian * diffuseColor +
                 specular * specularColor);

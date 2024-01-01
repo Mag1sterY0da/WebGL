@@ -83,21 +83,25 @@ function draw() {
 
   surface.Draw();
 }
+function updSrf() {
+  surface.BufferData(CreateSurfaceData());
+  draw()
+}
 
 function CreateSurfaceData() {
   let vertexList = [];
-  const a = 1.5;
-  const b = 3;
-  const c = 2;
-  const d = 1;
+  const a = document.getElementById('a').value;
+  const b = document.getElementById('b').value;
+  const c = document.getElementById('c').value;
+  const d = document.getElementById('d').value;
 
   const getF = (a, b, v) => {
     return (
       (a * b) /
       Math.sqrt(
         Math.pow(a, 2) +
-          Math.pow(Math.sin(v), 2) +
-          Math.pow(b, 2) * Math.pow(Math.cos(v), 2)
+        Math.pow(Math.sin(v), 2) +
+        Math.pow(b, 2) * Math.pow(Math.cos(v), 2)
       )
     );
   };
@@ -110,13 +114,13 @@ function CreateSurfaceData() {
         (1 / 2) *
         (getF(a, b, vRad) * (1 + Math.cos(uRad)) +
           ((Math.pow(d, 2) - Math.pow(c, 2)) * (1 - Math.cos(uRad))) /
-            getF(a, b, vRad)) *
+          getF(a, b, vRad)) *
         Math.cos(vRad);
       const y =
         (1 / 2) *
         (getF(a, b, vRad) * (1 + Math.cos(uRad)) +
           ((Math.pow(d, 2) - Math.pow(c, 2)) * (1 - Math.cos(uRad))) /
-            getF(a, b, vRad)) *
+          getF(a, b, vRad)) *
         Math.sin(vRad);
       const z =
         (1 / 2) *

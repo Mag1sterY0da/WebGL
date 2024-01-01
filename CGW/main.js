@@ -69,10 +69,10 @@ function ShaderProgram(name, program) {
  */
 function draw() {
 
-  const a = 1.5;
-  const b = 3;
-  const c = 2;
-  const d = 1;
+  const a = document.getElementById('a').value;
+  const b = document.getElementById('b').value;
+  const c = document.getElementById('c').value;
+  const d = document.getElementById('d').value;
 
   const getF = (a, b, v) => {
     return (
@@ -164,14 +164,19 @@ function animate() {
   window.requestAnimationFrame(animate)
 }
 
+function updSrf() {
+  surface.BufferData(...CreateSurfaceData());
+  draw()
+}
+
 function CreateSurfaceData() {
   let vertexList = [],
     normalList = [],
     textureList = [];
-  const a = 1.5;
-  const b = 3;
-  const c = 2;
-  const d = 1;
+  const a = document.getElementById('a').value;
+  const b = document.getElementById('b').value;
+  const c = document.getElementById('c').value;
+  const d = document.getElementById('d').value;
 
   const getF = (a, b, v) => {
     return (

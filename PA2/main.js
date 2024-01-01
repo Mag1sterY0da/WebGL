@@ -94,17 +94,33 @@ function draw() {
 
   /* Draw the six faces of a cube, with different colors. */
   gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
+  gl.uniform1f(shProgram.iSpecularity, document.getElementById('specular').value);
+  let d = document.getElementById('diff').value
+  gl.uniform3fv(shProgram.iDiff, hexToRgb(d));
+  let s = document.getElementById('spec').value
+  gl.uniform3fv(shProgram.iSpec, hexToRgb(s));
 
   surface.Draw();
 }
-
+function hexToRgb(hex) {
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return [
+    parseInt(result[1], 16) / 255,
+    parseInt(result[2], 16) / 255,
+    parseInt(result[3], 16) / 255
+  ]
+}
+function updSrf() {
+  surface.BufferData(...CreateSurfaceData());
+  draw()
+}
 function CreateSurfaceData() {
   let vertexList = [],
     normalList = [];
-  const a = 1.5;
-  const b = 3;
-  const c = 2;
-  const d = 1;
+  const a = document.getElementById('a').value;
+  const b = document.getElementById('b').value;
+  const c = document.getElementById('c').value;
+  const d = document.getElementById('d').value;
 
   const getF = (a, b, v) => {
     return (
@@ -201,6 +217,9 @@ function initGL() {
     'NormalM'
   );
   shProgram.iColor = gl.getUniformLocation(prog, 'color');
+  shProgram.iSpecularity = gl.getUniformLocation(prog, 'u_spec');
+  shProgram.iDiff = gl.getUniformLocation(prog, 'u_dC');
+  shProgram.iSpec = gl.getUniformLocation(prog, 'u_sC');
 
   surface = new Model('Surface');
   surface.BufferData(...CreateSurfaceData());
