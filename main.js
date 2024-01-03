@@ -4,6 +4,7 @@ let gl; // The webgl context.
 let surface; // A surface model
 let shProgram; // A shader program
 let spaceball; // A SimpleRotator object that lets the user rotate the view by mouse.
+let sphere;
 
 function deg2rad(angle) {
   return (angle * Math.PI) / 180;
@@ -99,8 +100,17 @@ function draw() {
   gl.uniform3fv(shProgram.iDiff, hexToRgb(d));
   let s = document.getElementById('spec').value
   gl.uniform3fv(shProgram.iSpec, hexToRgb(s));
+  gl.uniform3fv(shProgram.iLightPos, [3 * Math.cos(Date.now() * 0.001), 3 * Math.sin(Date.now() * 0.001), 1]);
 
   surface.Draw();
+  gl.uniform4fv(shProgram.iColor, [1, 1, 0, 255]);
+  gl.uniformMatrix4fv(
+    shProgram.iModelViewProjectionMatrix,
+    false,
+    m4.multiply(modelViewProjection,
+      m4.translation(3 * Math.cos(Date.now() * 0.001), 3 * Math.sin(Date.now() * 0.001), 1))
+  );
+  sphere.Draw();
 }
 function hexToRgb(hex) {
   var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -110,10 +120,17 @@ function hexToRgb(hex) {
     parseInt(result[3], 16) / 255
   ]
 }
+
+function animate() {
+  draw()
+  window.requestAnimationFrame(animate)
+}
+
 function updSrf() {
   surface.BufferData(...CreateSurfaceData());
   draw()
 }
+
 function CreateSurfaceData() {
   let vertexList = [],
     normalList = [];
@@ -199,6 +216,39 @@ function CreateSurfaceData() {
   return [vertexList, normalList];
 }
 
+function CreateSphereSurfaceData() {
+  let vertexList = [];
+
+  let u = 0,
+    t = 0;
+  while (u < Math.PI * 2) {
+    while (t < Math.PI) {
+      let v = sphereSurface(u, t);
+      let w = sphereSurface(u + 0.1, t);
+      let wv = sphereSurface(u, t + 0.1);
+      let ww = sphereSurface(u + 0.1, t + 0.1);
+      vertexList.push(v.x, v.y, v.z);
+      vertexList.push(w.x, w.y, w.z);
+      vertexList.push(wv.x, wv.y, wv.z);
+      vertexList.push(wv.x, wv.y, wv.z);
+      vertexList.push(w.x, w.y, w.z);
+      vertexList.push(ww.x, ww.y, ww.z);
+      t += 0.1;
+    }
+    t = 0;
+    u += 0.1;
+  }
+  return vertexList
+}
+const radius = 0.1;
+function sphereSurface(long, lat) {
+  return {
+    x: radius * Math.cos(long) * Math.sin(lat),
+    y: radius * Math.sin(long) * Math.sin(lat),
+    z: radius * Math.cos(lat)
+  }
+}
+
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
   let prog = createProgram(gl, vertexShaderSource, fragmentShaderSource);
@@ -220,9 +270,12 @@ function initGL() {
   shProgram.iSpecularity = gl.getUniformLocation(prog, 'u_spec');
   shProgram.iDiff = gl.getUniformLocation(prog, 'u_dC');
   shProgram.iSpec = gl.getUniformLocation(prog, 'u_sC');
+  shProgram.iLightPos = gl.getUniformLocation(prog, 'lightPos');
 
   surface = new Model('Surface');
   surface.BufferData(...CreateSurfaceData());
+  sphere = new Model()
+  sphere.BufferData(CreateSphereSurfaceData(), CreateSphereSurfaceData())
 
   gl.enable(gl.DEPTH_TEST);
 }
@@ -287,4 +340,5 @@ function init() {
   spaceball = new TrackballRotator(canvas, draw, 0);
 
   draw();
+  animate()
 }

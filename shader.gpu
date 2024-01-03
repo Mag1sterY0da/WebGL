@@ -7,6 +7,8 @@ uniform mat4 ModelViewProjectionMatrix, NormalM;
 
 
 varying vec3 varCol;
+
+uniform vec3 lightPos;
 uniform float u_spec;
 uniform vec3 u_sC,u_dC;
 
@@ -14,7 +16,6 @@ void main() {
     vec4 vertPos4 = ModelViewProjectionMatrix * vec4(vertex, 1.0);
     vec3 vertPos = vec3(vertPos4) / vertPos4.w;
     vec4 norm = NormalM*vec4(normal,1.0);
-    vec3 lightPos = vec3(1);
     vec3 N = normalize(vec3(norm));
     vec3 L = normalize(lightPos - vertPos);
     // Lambert's cosine law
@@ -27,7 +28,7 @@ void main() {
         float specAngle = max(dot(R, V), 0.0);
         specular = pow(specAngle, u_spec);
     }
-    vec3 ambientColor = u_dC*0.1;
+   vec3 ambientColor = u_dC*0.1;
     vec3 diffuseColor = u_dC;
     vec3 specularColor = u_sC;
     varCol = vec3(ambientColor +
@@ -50,4 +51,7 @@ uniform vec4 color;
 void main() {
     gl_FragColor = color;
     gl_FragColor = vec4(varCol,1.0);
+    if(color.a>100.0){
+        gl_FragColor = vec4(1.0);
+    }
 }`;
