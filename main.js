@@ -5,6 +5,7 @@ let surface; // A surface model
 let shProgram; // A shader program
 let spaceball; // A SimpleRotator object that lets the user rotate the view by mouse.
 let sphere;
+let spherePos = [1.0, 1.0];
 
 function deg2rad(angle) {
   return (angle * Math.PI) / 180;
@@ -15,13 +16,16 @@ function Model(name) {
   this.name = name;
   this.iVertexBuffer = gl.createBuffer();
   this.iNormalBuffer = gl.createBuffer();
+  this.iTexCoordsBuffer = gl.createBuffer();
   this.count = 0;
 
-  this.BufferData = function (vertices, normals) {
+  this.BufferData = function (vertices, normals, texCoords) {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STREAM_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.iTexCoordsBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STREAM_DRAW);
 
     this.count = vertices.length / 3;
   };
@@ -33,6 +37,9 @@ function Model(name) {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
     gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(shProgram.iAttribNormal);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.iTexCoordsBuffer);
+    gl.vertexAttribPointer(shProgram.iAttribTexCoord, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(shProgram.iAttribTexCoord);
 
     // gl.drawArrays(gl.LINE_STRIP, 0, this.count);
     gl.drawArrays(gl.TRIANGLES, 0, this.count);
@@ -61,6 +68,45 @@ function ShaderProgram(name, program) {
  * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
  */
 function draw() {
+
+  const a = document.getElementById('a').value;
+  const b = document.getElementById('b').value;
+  const c = document.getElementById('c').value;
+  const d = document.getElementById('d').value;
+
+  const getF = (a, b, v) => {
+    return (
+      (a * b) /
+      Math.sqrt(
+        Math.pow(a, 2) +
+        Math.pow(Math.sin(v), 2) +
+        Math.pow(b, 2) * Math.pow(Math.cos(v), 2)
+      )
+    );
+  };
+
+  const getVertex = (u, v) => {
+    const uRad = u;
+    const vRad = v;
+    const x =
+      (1 / 2) *
+      (getF(a, b, vRad) * (1 + Math.cos(uRad)) +
+        ((Math.pow(d, 2) - Math.pow(c, 2)) * (1 - Math.cos(uRad))) /
+        getF(a, b, vRad)) *
+      Math.cos(vRad);
+    const y =
+      (1 / 2) *
+      (getF(a, b, vRad) * (1 + Math.cos(uRad)) +
+        ((Math.pow(d, 2) - Math.pow(c, 2)) * (1 - Math.cos(uRad))) /
+        getF(a, b, vRad)) *
+      Math.sin(vRad);
+    const z =
+      (1 / 2) *
+      (getF(a, b, vRad) -
+        (Math.pow(d, 2) - Math.pow(c, 2)) / getF(a, b, vRad)) *
+      Math.sin(uRad);
+    return [x, y, z]
+  }
   gl.clearColor(0, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -95,30 +141,22 @@ function draw() {
 
   /* Draw the six faces of a cube, with different colors. */
   gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
-  gl.uniform1f(shProgram.iSpecularity, document.getElementById('specular').value);
-  let d = document.getElementById('diff').value
-  gl.uniform3fv(shProgram.iDiff, hexToRgb(d));
-  let s = document.getElementById('spec').value
-  gl.uniform3fv(shProgram.iSpec, hexToRgb(s));
   gl.uniform3fv(shProgram.iLightPos, [3 * Math.cos(Date.now() * 0.001), 3 * Math.sin(Date.now() * 0.001), 1]);
+  gl.uniform3fv(shProgram.iTexTranslate, [spherePos[0] / (Math.PI * 2), spherePos[1] / (Math.PI * 2), 0]);
+  gl.uniform1f(shProgram.iSclAmpl, document.getElementById('scl').value);
+
 
   surface.Draw();
   gl.uniform4fv(shProgram.iColor, [1, 1, 0, 255]);
+  // console.log(spherePos)
   gl.uniformMatrix4fv(
     shProgram.iModelViewProjectionMatrix,
     false,
     m4.multiply(modelViewProjection,
-      m4.translation(3 * Math.cos(Date.now() * 0.001), 3 * Math.sin(Date.now() * 0.001), 1))
+      m4.translation(...getVertex(...spherePos)))
+    // m4.translation(0, 0, 0))
   );
   sphere.Draw();
-}
-function hexToRgb(hex) {
-  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return [
-    parseInt(result[1], 16) / 255,
-    parseInt(result[2], 16) / 255,
-    parseInt(result[3], 16) / 255
-  ]
 }
 
 function animate() {
@@ -133,7 +171,8 @@ function updSrf() {
 
 function CreateSurfaceData() {
   let vertexList = [],
-    normalList = [];
+    normalList = [],
+    textureList = [];
   const a = document.getElementById('a').value;
   const b = document.getElementById('b').value;
   const c = document.getElementById('c').value;
@@ -210,10 +249,17 @@ function CreateSurfaceData() {
       normalList.push(...Normal3);
       normalList.push(...Normal2);
       normalList.push(...Normal4);
+      textureList.push(u / 360, v / 360)
+      textureList.push((u + 5) / 360, v / 360)
+      textureList.push(u / 360, (v + 5) / 360)
+      textureList.push(u / 360, (v + 5) / 360)
+      textureList.push((u + 5) / 360, v / 360)
+      textureList.push((u + 5) / 360, (v + 5) / 360)
+
     }
   }
 
-  return [vertexList, normalList];
+  return [vertexList, normalList, textureList];
 }
 
 function CreateSphereSurfaceData() {
@@ -258,6 +304,7 @@ function initGL() {
 
   shProgram.iAttribVertex = gl.getAttribLocation(prog, 'vertex');
   shProgram.iAttribNormal = gl.getAttribLocation(prog, 'normal');
+  shProgram.iAttribTexCoord = gl.getAttribLocation(prog, 'texCoord');
   shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(
     prog,
     'ModelViewProjectionMatrix'
@@ -267,15 +314,14 @@ function initGL() {
     'NormalM'
   );
   shProgram.iColor = gl.getUniformLocation(prog, 'color');
-  shProgram.iSpecularity = gl.getUniformLocation(prog, 'u_spec');
-  shProgram.iDiff = gl.getUniformLocation(prog, 'u_dC');
-  shProgram.iSpec = gl.getUniformLocation(prog, 'u_sC');
   shProgram.iLightPos = gl.getUniformLocation(prog, 'lightPos');
+  shProgram.iTexTranslate = gl.getUniformLocation(prog, 'texTranslate');
+  shProgram.iSclAmpl = gl.getUniformLocation(prog, 'scaleAmpl');
 
   surface = new Model('Surface');
   surface.BufferData(...CreateSurfaceData());
   sphere = new Model()
-  sphere.BufferData(CreateSphereSurfaceData(), CreateSphereSurfaceData())
+  sphere.BufferData(CreateSphereSurfaceData(), CreateSphereSurfaceData(), CreateSphereSurfaceData())
 
   gl.enable(gl.DEPTH_TEST);
 }
@@ -339,6 +385,47 @@ function init() {
 
   spaceball = new TrackballRotator(canvas, draw, 0);
 
+  LoadTexture()
+
   draw();
   animate()
+}
+
+window.onkeydown = (e) => {
+  if (e.keyCode == 87) {
+    spherePos[0] = Math.min(spherePos[0] + 0.1, Math.PI * 2);
+  }
+  else if (e.keyCode == 83) {
+    spherePos[0] = Math.max(spherePos[0] - 0.1, 0);
+  }
+  else if (e.keyCode == 68) {
+    spherePos[1] = Math.min(spherePos[1] + 0.1, 2 * Math.PI);
+  }
+  else if (e.keyCode == 65) {
+    spherePos[1] = Math.max(spherePos[1] - 0.1, 0);
+  }
+}
+
+function LoadTexture() {
+  let texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+  const image = new Image();
+  image.crossOrigin = 'anonymus';
+  image.src = "https://static.turbosquid.com/Preview/2014/08/01__12_04_02/Urban__Brickwall1.jpg766465EF-01F6-40FD-A9055898D5FDCEA3.jpgLarger.jpg";
+  image.onload = () => {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      image
+    );
+    console.log("imageLoaded")
+    draw()
+  }
 }
