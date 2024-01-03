@@ -13,11 +13,14 @@ function deg2rad(angle) {
 function Model(name) {
   this.name = name;
   this.iVertexBuffer = gl.createBuffer();
+  this.iNormalBuffer = gl.createBuffer();
   this.count = 0;
 
-  this.BufferData = function (vertices) {
+  this.BufferData = function (vertices, normals) {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STREAM_DRAW);
 
     this.count = vertices.length / 3;
   };
@@ -26,8 +29,12 @@ function Model(name) {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
     gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(shProgram.iAttribVertex);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
+    gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(shProgram.iAttribNormal);
 
-    gl.drawArrays(gl.LINE_STRIP, 0, this.count);
+    // gl.drawArrays(gl.LINE_STRIP, 0, this.count);
+    gl.drawArrays(gl.TRIANGLES, 0, this.count);
   };
 }
 
@@ -57,7 +64,7 @@ function draw() {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   /* Set the values of the projection transformation */
-  let projection = m4.perspective(Math.PI / 4, 1, 8, 12);
+  let projection = m4.perspective(Math.PI / 4, 1, 6, 14);
 
   /* Get the view matrix from the SimpleRotator object.*/
   let modelView = spaceball.getViewMatrix();
@@ -78,18 +85,38 @@ function draw() {
     modelViewProjection
   );
 
+  const normal = m4.identity();
+  m4.inverse(modelView, normal);
+  m4.transpose(normal, normal);
+
+  gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normal);
+
+
   /* Draw the six faces of a cube, with different colors. */
   gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
+  gl.uniform1f(shProgram.iSpecularity, document.getElementById('specular').value);
+  let d = document.getElementById('diff').value
+  gl.uniform3fv(shProgram.iDiff, hexToRgb(d));
+  let s = document.getElementById('spec').value
+  gl.uniform3fv(shProgram.iSpec, hexToRgb(s));
 
   surface.Draw();
 }
+function hexToRgb(hex) {
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return [
+    parseInt(result[1], 16) / 255,
+    parseInt(result[2], 16) / 255,
+    parseInt(result[3], 16) / 255
+  ]
+}
 function updSrf() {
-  surface.BufferData(CreateSurfaceData());
+  surface.BufferData(...CreateSurfaceData());
   draw()
 }
-
 function CreateSurfaceData() {
-  let vertexList = [];
+  let vertexList = [],
+    normalList = [];
   const a = document.getElementById('a').value;
   const b = document.getElementById('b').value;
   const c = document.getElementById('c').value;
@@ -106,33 +133,70 @@ function CreateSurfaceData() {
     );
   };
 
+  const getVertex = (u, v) => {
+    const uRad = deg2rad(u);
+    const vRad = deg2rad(v);
+    const x =
+      (1 / 2) *
+      (getF(a, b, vRad) * (1 + Math.cos(uRad)) +
+        ((Math.pow(d, 2) - Math.pow(c, 2)) * (1 - Math.cos(uRad))) /
+        getF(a, b, vRad)) *
+      Math.cos(vRad);
+    const y =
+      (1 / 2) *
+      (getF(a, b, vRad) * (1 + Math.cos(uRad)) +
+        ((Math.pow(d, 2) - Math.pow(c, 2)) * (1 - Math.cos(uRad))) /
+        getF(a, b, vRad)) *
+      Math.sin(vRad);
+    const z =
+      (1 / 2) *
+      (getF(a, b, vRad) -
+        (Math.pow(d, 2) - Math.pow(c, 2)) / getF(a, b, vRad)) *
+      Math.sin(uRad);
+    return [x, y, z]
+  }
+
+  const getNormal = (u, v) => {
+    let psi = 0.0001
+    let uv = getVertex(u, v)
+    let u1 = getVertex(u + psi, v)
+    let v1 = getVertex(u, v + psi)
+    let dU = []
+    let dV = []
+    for (let i = 0; i < 3; i++) {
+      dU.push((uv[i] - u1[i]) / psi)
+      dV.push((uv[i] - v1[i]) / psi)
+    }
+    const n = m4.normalize(m4.cross(dU, dV))
+    return n
+  }
+
   for (let u = 0; u <= 360; u += 5) {
     for (let v = 0; v <= 360; v += 5) {
-      const uRad = deg2rad(u);
-      const vRad = deg2rad(v);
-      const x =
-        (1 / 2) *
-        (getF(a, b, vRad) * (1 + Math.cos(uRad)) +
-          ((Math.pow(d, 2) - Math.pow(c, 2)) * (1 - Math.cos(uRad))) /
-          getF(a, b, vRad)) *
-        Math.cos(vRad);
-      const y =
-        (1 / 2) *
-        (getF(a, b, vRad) * (1 + Math.cos(uRad)) +
-          ((Math.pow(d, 2) - Math.pow(c, 2)) * (1 - Math.cos(uRad))) /
-          getF(a, b, vRad)) *
-        Math.sin(vRad);
-      const z =
-        (1 / 2) *
-        (getF(a, b, vRad) -
-          (Math.pow(d, 2) - Math.pow(c, 2)) / getF(a, b, vRad)) *
-        Math.sin(uRad);
-
-      vertexList.push(x, y, z);
+      let vertex1 = getVertex(u, v)
+      let vertex2 = getVertex(u + 5, v)
+      let vertex3 = getVertex(u, v + 5)
+      let vertex4 = getVertex(u + 5, v + 5)
+      let Normal1 = getNormal(u, v)
+      let Normal2 = getNormal(u + 5, v)
+      let Normal3 = getNormal(u, v + 5)
+      let Normal4 = getNormal(u + 5, v + 5)
+      vertexList.push(...vertex1);
+      vertexList.push(...vertex2);
+      vertexList.push(...vertex3);
+      vertexList.push(...vertex3);
+      vertexList.push(...vertex2);
+      vertexList.push(...vertex4);
+      normalList.push(...Normal1);
+      normalList.push(...Normal2);
+      normalList.push(...Normal3);
+      normalList.push(...Normal3);
+      normalList.push(...Normal2);
+      normalList.push(...Normal4);
     }
   }
 
-  return vertexList;
+  return [vertexList, normalList];
 }
 
 /* Initialize the WebGL context. Called from init() */
@@ -143,14 +207,22 @@ function initGL() {
   shProgram.Use();
 
   shProgram.iAttribVertex = gl.getAttribLocation(prog, 'vertex');
+  shProgram.iAttribNormal = gl.getAttribLocation(prog, 'normal');
   shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(
     prog,
     'ModelViewProjectionMatrix'
   );
+  shProgram.iNormalMatrix = gl.getUniformLocation(
+    prog,
+    'NormalM'
+  );
   shProgram.iColor = gl.getUniformLocation(prog, 'color');
+  shProgram.iSpecularity = gl.getUniformLocation(prog, 'u_spec');
+  shProgram.iDiff = gl.getUniformLocation(prog, 'u_dC');
+  shProgram.iSpec = gl.getUniformLocation(prog, 'u_sC');
 
   surface = new Model('Surface');
-  surface.BufferData(CreateSurfaceData());
+  surface.BufferData(...CreateSurfaceData());
 
   gl.enable(gl.DEPTH_TEST);
 }
