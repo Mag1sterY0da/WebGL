@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 
-    <title>PA#2</title>
+    <title>CGW</title>
     <style>
         body {
             background-color: #EEEEEE;
@@ -25,30 +25,35 @@
 
 <body onload="init()">
     <h2>Virich Cyclic Surface</h2>
-    <h2>PA#2</h2>
+    <h2>CGW</h2>
     <div style="display: flex; flex-direction: row;">
-    <div style="display: flex; flex-direction: column;">
-        <label for="conv">Convergence</label>
-    <input type="range" name="conv" id="conv" min="10" max="1000" value="1000" step="10" onchange="draw()">
-    <label for="eyes">Eye Separation</label>
-    <input type="range" name="eyes" id="eyes" min="0" max="1" value="0.1" step="0.01" onchange="draw()">
-    <label for="fov">Field of View</label>
-    <input type="range" name="fov" id="fov" min="0.01" max="3" value="1" step="0.01" onchange="draw()">
-    <label for="near">Near clipping distance</label>
-    <input type="range" name="near" id="near" min="1" max="15" value="1" step="0.1" onchange="draw()">
+        <div style="display: flex; flex-direction: column;">
+            <label for="conv">Convergence</label>
+            <input type="range" name="conv" id="conv" min="10" max="1000" value="1000" step="10" onchange="draw()">
+            <label for="eyes">Eye Separation</label>
+            <input type="range" name="eyes" id="eyes" min="0" max="1" value="0.1" step="0.01" onchange="draw()">
+            <label for="fov">Field of View</label>
+            <input type="range" name="fov" id="fov" min="0.01" max="3" value="1" step="0.01" onchange="draw()">
+            <label for="near">Near clipping distance</label>
+            <input type="range" name="near" id="near" min="1" max="15" value="1" step="0.1" onchange="draw()">
+        </div>
+        <div style="display: flex; flex-direction: column;">
+            <label for="a">a</label>
+            <input type="range" name="a" id="a" min="0" max="5" value="1.5" step="0.1" onchange="updSrf()">
+            <label for="b">b</label>
+            <input type="range" name="b" id="b" min="0" max="5" value="3" step="0.1" onchange="updSrf()">
+            <label for="c">c</label>
+            <input type="range" name="c" id="c" min="0" max="5" value="2" step="0.1" onchange="updSrf()">
+            <label for="d">d</label>
+            <input type="range" name="d" id="d" min="0" max="5" value="1" step="0.1" onchange="updSrf()">
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <label for="filter">Filter</label>
+            <input type="checkbox" name="filter" id="filter" checked>
+            <button id="playBtn" onclick="playMusic()">Play</button>
+        </div>
     </div>
-    <div style="display: flex; flex-direction: column;">
-    <label for="a">a</label>
-    <input type="range" name="a" id="a" min="0" max="5" value="1.5" step="0.1" onchange="updSrf()">
-    <label for="b">b</label>
-    <input type="range" name="b" id="b" min="0" max="5" value="3" step="0.1" onchange="updSrf()">
-    <label for="c">c</label>
-    <input type="range" name="c" id="c" min="0" max="5" value="2" step="0.1" onchange="updSrf()">
-    <label for="d">d</label>
-    <input type="range" name="d" id="d" min="0" max="5" value="1" step="0.1" onchange="updSrf()">
-</div>
-</div>
-    
+
     <div id="canvas-holder">
         <canvas width="900" height="900" id="webglcanvas" style="background-color:red"></canvas>
     </div>

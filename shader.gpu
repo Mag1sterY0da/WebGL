@@ -6,6 +6,7 @@ attribute vec3 vertex;
 attribute vec2 texCoord;
 varying vec2 texCoordV;
 uniform mat4 ModelViewProjectionMatrix;
+uniform bool drawSphere;
 
 void main() {
     texCoordV=texCoord;
@@ -20,8 +21,14 @@ const fragmentShaderSource = `
 #else
    precision mediump float;
 #endif
+uniform vec4 color;
 uniform sampler2D tmu;
 varying vec2 texCoordV;
+uniform bool drawSphere;
 void main() {
-    gl_FragColor = texture2D(tmu, texCoordV);
+   if (drawSphere) {
+        gl_FragColor = color;
+      } else {
+        gl_FragColor = texture2D(tmu, texCoordV);
+      }
 }`;
